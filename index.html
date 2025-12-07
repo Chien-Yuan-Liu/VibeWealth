@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Wealth - 複利計算器</title>
+    <meta name="description" content="優雅的投資複利計算工具，預見您的財富增長。">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'hsl(222 47% 11%)',
+                        primary: 'hsl(142 71% 45%)',
+                        'primary-foreground': 'hsl(144 100% 11%)',
+                        muted: 'hsl(217 33% 17%)',
+                        'muted-foreground': 'hsl(215 20% 65%)',
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            background-color: hsl(222 47% 11%);
+            color: hsl(210 40% 98%);
+            background-image: 
+                radial-gradient(at 0% 0%, hsl(222 47% 15%) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, hsl(142 71% 15% / 0.3) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, hsl(222 47% 15%) 0px, transparent 50%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 0.75rem;
+        }
+
+        .glass-input {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            border-color: rgba(34, 197, 94, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+        }
+
+        /* Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: hsl(142 71% 45%);
+            border: 2px solid hsl(222 47% 11%);
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+        input[type=range]:focus::-webkit-slider-runnable-track {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Tabs */
+        .tab-btn[data-state="active"] {
+            background-color: hsl(142 71% 45%);
+            color: hsl(144 100% 11%);
+        }
+    </style>
+</head>
+<body class="p-6 md:p-12 flex items-center justify-center font-sans">
+
+    <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Panel: Inputs -->
+        <div class="lg:col-span-4 space-y-6 animate-fade-in-left">
+            <div class="mb-8">
+                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">
+                    Vibe <span class="text-primary font-bold">Wealth</span>
+                </h1>
+                <p class="text-muted-foreground mt-2">
+                    透過複利效應，預見您的財富未來。
+                </p>
+            </div>
+
+            <div class="glass-card p-6 space-y-8">
+                <!-- Mode Toggle -->
+                <div class="bg-white/5 border border-white/10 p-1 rounded-lg grid grid-cols-2 gap-1">
+                    <button id="btn-lump" class="tab-btn py-2 px-4 rounded-md text-sm font-medium transition-all duration-200" data-state="active">單筆投資</button>
+                    <button id="btn-dca" class="tab-btn py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 text-muted-foreground hover:text-white" data-state="inactive">定期定額</button>
+                </div>
+
+                <!-- Principal / Monthly Input -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <label id="label-money" class="text-lg flex items-center gap-2 text-white">
+                            <i data-lucide="dollar-sign" class="w-4 h-4 text-primary"></i> 
+                            單筆本金
+                        </label>
+                        <span id="display-money" class="font-mono text-primary font-bold text-lg">$1,000,000</span>
+                    </div>
+                    <input type="range" id="slider-money" min="10000" max="5000000" step="10000" value="1000000" class="w-full">
+                    <input type="number" id="input-money" value="1000000" class="glass-input w-full p-2 rounded-md font-mono text-right text-white">
+                </div>
+
+                <!-- Rate Input -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <label class="text-lg flex items-center gap-2 text-white">
+                            <i data-lucide="percent" class="w-4 h-4 text-primary"></i>
+                            年化報酬率
+                        </label>
+                        <span id="display-rate" class="font-mono text-primary font-bold text-lg">6%</span>
+                    </div>
+                    <input type="range" id="slider-rate" min="1" max="30" step="0.5" value="6" class="w-full">
+                </div>
+
+                <!-- Years Input -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <label class="text-lg flex items-center gap-2 text-white">
+                            <i data-lucide="calendar" class="w-4 h-4 text-primary"></i>
+                            投資年數
+                        </label>
+                        <span id="display-years" class="font-mono text-primary font-bold text-lg">20 年</span>
+                    </div>
+                    <input type="range" id="slider-years" min="1" max="50" step="1" value="20" class="w-full">
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Visualization -->
+        <div class="lg:col-span-8 space-y-6 animate-fade-in-right">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card p-6 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <p class="text-muted-foreground mb-1">總資產價值</p>
+                    <h2 id="total-amount" class="text-4xl font-mono font-bold text-white tracking-tighter">
+                        $0
+                    </h2>
+                </div>
+
+                <div class="glass-card p-6 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <p class="text-muted-foreground mb-1 flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-4 h-4 text-primary"></i>
+                        總獲利 (利息)
+                    </p>
+                    <h2 id="total-interest" class="text-4xl font-mono font-bold text-primary tracking-tighter">
+                        +$0
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="glass-card p-6 h-[400px] relative">
+                <canvas id="wealthChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Icons
+        lucide.createIcons();
+
+        // State
+        let state = {
+            mode: 'lump', // 'lump' or 'dca'
+            money: 1000000, // principal or monthly
+            rate: 6,
+            years: 20
+        };
+
+        // DOM Elements
+        const els = {
+            btnLump: document.getElementById('btn-lump'),
+            btnDca: document.getElementById('btn-dca'),
+            labelMoney: document.getElementById('label-money'),
+            displayMoney: document.getElementById('display-money'),
+            sliderMoney: document.getElementById('slider-money'),
+            inputMoney: document.getElementById('input-money'),
+            displayRate: document.getElementById('display-rate'),
+            sliderRate: document.getElementById('slider-rate'),
+            displayYears: document.getElementById('display-years'),
+            sliderYears: document.getElementById('slider-years'),
+            totalAmount: document.getElementById('total-amount'),
+            totalInterest: document.getElementById('total-interest'),
+            ctx: document.getElementById('wealthChart').getContext('2d')
+        };
+
+        // Chart Instance
+        let chart;
+
+        // Formatter
+        const formatMoney = (val) => {
+            return new Intl.NumberFormat("zh-TW", {
+                style: "currency",
+                currency: "TWD",
+                maximumFractionDigits: 0,
+            }).format(val);
+        };
+
+        // Calculation Logic
+        function calculate() {
+            const result = [];
+            let currentAmount = state.mode === "lump" ? state.money : 0;
+            let totalInvested = state.mode === "lump" ? state.money : 0;
+            
+            // Initial point
+            result.push({
+                year: 0,
+                amount: currentAmount
+            });
+
+            for (let i = 1; i <= state.years; i++) {
+                if (state.mode === "lump") {
+                    currentAmount = currentAmount * (1 + state.rate / 100);
+                } else {
+                    // Monthly compounding for DCA
+                    for (let m = 0; m < 12; m++) {
+                        currentAmount = (currentAmount + state.money) * (1 + state.rate / 100 / 12);
+                        totalInvested += state.money;
+                    }
+                }
+
+                result.push({
+                    year: i,
+                    amount: Math.round(currentAmount)
+                });
+            }
+
+            const finalAmount = result[result.length - 1].amount;
+            const totalInterest = finalAmount - totalInvested;
+
+            return { data: result, finalAmount, totalInterest };
+        }
+
+        // Update UI
+        function update() {
+            // Update Displays
+            els.displayMoney.textContent = formatMoney(state.money);
+            els.displayRate.textContent = state.rate + '%';
+            els.displayYears.textContent = state.years + ' 年';
+            
+            // Sync Inputs
+            els.sliderMoney.value = state.money;
+            els.inputMoney.value = state.money;
+            els.sliderRate.value = state.rate;
+            els.sliderYears.value = state.years;
+
+            // Update Labels/Ranges based on mode
+            if (state.mode === 'lump') {
+                els.labelMoney.innerHTML = '<i data-lucide="dollar-sign" class="w-4 h-4 text-primary"></i> 單筆本金';
+                els.sliderMoney.min = 10000;
+                els.sliderMoney.max = 5000000;
+                els.sliderMoney.step = 10000;
+                els.btnLump.dataset.state = "active";
+                els.btnDca.dataset.state = "inactive";
+                els.btnLump.classList.remove('text-muted-foreground');
+                els.btnDca.classList.add('text-muted-foreground');
+            } else {
+                els.labelMoney.innerHTML = '<i data-lucide="coins" class="w-4 h-4 text-primary"></i> 每月投入';
+                els.sliderMoney.min = 1000;
+                els.sliderMoney.max = 100000;
+                els.sliderMoney.step = 1000;
+                els.btnLump.dataset.state = "inactive";
+                els.btnDca.dataset.state = "active";
+                els.btnLump.classList.add('text-muted-foreground');
+                els.btnDca.classList.remove('text-muted-foreground');
+            }
+            lucide.createIcons();
+
+            // Calculate
+            const { data, finalAmount, totalInterest } = calculate();
+
+            // Update Summary
+            els.totalAmount.textContent = formatMoney(finalAmount);
+            els.totalInterest.textContent = '+' + formatMoney(totalInterest);
+
+            // Update Chart
+            updateChart(data);
+        }
+
+        function updateChart(data) {
+            const labels = data.map(d => d.year + '年');
+            const values = data.map(d => d.amount);
+
+            if (chart) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = values;
+                chart.update();
+            } else {
+                // Gradient
+                const gradient = els.ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, 'rgba(34, 197, 94, 0.5)');
+                gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+
+                chart = new Chart(els.ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '總資產',
+                            data: values,
+                            borderColor: 'hsl(142, 71%, 45%)',
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderWidth: 1,
+                                padding: 10,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return formatMoney(context.raw);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: 'rgba(255,255,255,0.5)' }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { 
+                                    color: 'rgba(255,255,255,0.5)',
+                                    callback: function(value) {
+                                        return '$' + (value/10000).toFixed(0) + '萬';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Event Listeners
+        els.btnLump.addEventListener('click', () => {
+            state.mode = 'lump';
+            state.money = 1000000; // Reset to default for lump
+            update();
+        });
+
+        els.btnDca.addEventListener('click', () => {
+            state.mode = 'dca';
+            state.money = 10000; // Reset to default for DCA
+            update();
+        });
+
+        els.sliderMoney.addEventListener('input', (e) => {
+            state.money = Number(e.target.value);
+            update();
+        });
+        
+        els.inputMoney.addEventListener('input', (e) => {
+            state.money = Number(e.target.value);
+            // Don't update slider immediately to avoid jumping while typing
+            // But we need to recalc
+            const { data, finalAmount, totalInterest } = calculate();
+            els.totalAmount.textContent = formatMoney(finalAmount);
+            els.totalInterest.textContent = '+' + formatMoney(totalInterest);
+            updateChart(data);
+        });
+
+        els.sliderRate.addEventListener('input', (e) => {
+            state.rate = Number(e.target.value);
+            update();
+        });
+
+        els.sliderYears.addEventListener('input', (e) => {
+            state.years = Number(e.target.value);
+            update();
+        });
+
+        // Init
+        update();
+
+    </script>
+</body>
+</html>
